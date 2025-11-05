@@ -1,8 +1,8 @@
 <?php
-
 /**
- * @group formatting
+ * Tests for the sanitize_user() function.
  *
+ * @group formatting
  * @covers ::sanitize_user
  */
 class Tests_Formatting_SanitizeUser extends WP_UnitTestCase {
@@ -37,14 +37,13 @@ class Tests_Formatting_SanitizeUser extends WP_UnitTestCase {
 		$this->assertSame( $expected, sanitize_user( 'AT&amp;T Test;' ) );
 	}
 
-	/*
+	/**
 	 * Some languages use the Latin alphabet with various accents.
 	 * The city Münster is in Germany, Orléans is in France. This
 	 * test checks that an author (a user name) can use an accent.
 	 *
 	 * @ticket 31992
 	 */
-
 	public function test_strips_percent_encoded_octets() {
 		if ( ! function_exists( 'mb_str_split' ) ) {
 			$this->markTestSkipped( 'PHP 7.2/3 lacks mb_str_split' );
@@ -57,6 +56,13 @@ class Tests_Formatting_SanitizeUser extends WP_UnitTestCase {
 		$this->assertSame( 'abc', sanitize_user( '()~ab~ˆcˆ!', true ) );
 	}
 
+	/**
+	 * Arabic script is used in various languages, including
+	 * Arabic and Persian. This test checks that an author
+	 * (a user name) can use such letters.
+	 *
+	 * @ticket 31992
+	 */
 	public function test_accepts_all_arabic() {
 		if ( ! function_exists( 'mb_str_split' ) ) {
 			$this->markTestSkipped( 'PHP 7.2/3 lacks mb_str_split' );
@@ -68,7 +74,7 @@ class Tests_Formatting_SanitizeUser extends WP_UnitTestCase {
 		$this->assertSame( $expected, sanitize_user( $encoded ) );
 	}
 
-	/*
+	/**
 	 * Some languages use the Latin alphabet with various
 	 * extra letters. The city Bodø is in Norway, Gießen in
 	 * Germany. This test checks that an author (a user name) can
@@ -78,7 +84,6 @@ class Tests_Formatting_SanitizeUser extends WP_UnitTestCase {
 	 *
 	 * @ticket 31992
 	 */
-
 	public function test_accepts_west_african_latin() {
 		if ( ! function_exists( 'mb_str_split' ) ) {
 			$this->markTestSkipped( 'PHP 7.2/3 lacks mb_str_split' );
@@ -90,7 +95,7 @@ class Tests_Formatting_SanitizeUser extends WP_UnitTestCase {
 		$this->assertSame( $expected, sanitize_user( $encoded ) );
 	}
 
-	/*
+	/**
 	 * Some people are worried about using letters that look alike
 	 * from different alphabets, for example the Cyrillic V looks
 	 * exactly like the Latin B. If any user names use confusable
@@ -100,7 +105,6 @@ class Tests_Formatting_SanitizeUser extends WP_UnitTestCase {
 	 *
 	 * @ticket 31992
 	 */
-
 	public function test_blocks_latin_cyrillic_mixed_name() {
 		$this->assertSame( 'arn', sanitize_user( 'arn%D1%82' ) );
 	}
