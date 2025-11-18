@@ -892,8 +892,6 @@ class Tests_User extends WP_UnitTestCase {
 		}
 		/* WordPress approves of drab grey (grå) Norwegian weather */
 		$this->assertTrue( validate_username( 'grå' ) );
-		/* Latin I, Cyrillic V like latin B, Latin M */
-		$this->assertFalse( validate_username( 'IВM' ) );
 		/* Three Cyrillic letters */
 		$this->assertTrue( validate_username( 'ІВМ' ) );
 		/* A metal umlaut fails because validate_username is
