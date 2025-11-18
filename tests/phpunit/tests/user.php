@@ -733,6 +733,34 @@ class Tests_User extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Our goal here is to test whether user data can be corrupted
+	 * while being stored in the database. The user data can be almost
+	 * any unicode, while the database might theoretically use e.g.
+	 * ISO-8859-1. ISO-8859-1 can handle a user with login Noël but
+	 * will mishandle a user with login Łukasz.
+	 *
+	 * The database tests provide coverage for this kind of thing
+	 * in general; this test exists to provide additional coverage
+	 * against the risk of locking a user out.
+	 *
+	 * Since the database in the unit test harness uses UTF-8, this test
+	 * needs to set a user login that UTF-8 cannot handle. 0xC0 is that
+	 * (0xC0 never occurs in a valid UTF-8 string). If wpdb refuses to
+	 * store that, we trust that the same logic will also refuse to store
+	 * other impossible strings, such as Łukasz in a database that cannot
+	 * store Ł.
+	 *
+	 * Based on this review comment: https://github.com/WordPress/wordpress-develop/pull/5237#issuecomment-3504963005
+	 *
+	 * @ticket 31992
+	 */
+	public function test_user_corrupted_login() {
+		global $wpdb;
+		$rows = $wpdb->update( $wpdb->users, array( 'user_login' => hex2bin( 'c0' ) ), array( 'ID' => $this->author->ID ) );
+		$this->assertFalse( $rows );
+	}
+
+	/**
 	 * @ticket 27317
 	 * @dataProvider data_illegal_user_logins
 	 */
