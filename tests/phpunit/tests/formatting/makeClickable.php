@@ -61,6 +61,55 @@ class Tests_Formatting_MakeClickable extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A Unicode address is linked, in step with what is_email() now accepts.
+	 *
+	 * @ticket 31992
+	 * @requires extension intl
+	 */
+	public function test_unicode_mailto() {
+		if ( ! is_email( 'info@grå.org' ) ) {
+			$this->markTestSkipped( 'Unicode email addresses are not enabled on this installation.' );
+		}
+
+		$this->assertSame(
+			'<a href="mailto:info@grå.org">info@grå.org</a>',
+			make_clickable( 'info@grå.org' )
+		);
+	}
+
+	/**
+	 * Punctuation ending a sentence or clause stays as text, outside the link.
+	 *
+	 * @ticket 31992
+	 *
+	 * @dataProvider data_mailto_with_trailing_punctuation
+	 *
+	 * @param string $text     Input text.
+	 * @param string $expected Expected linked output.
+	 */
+	public function test_mailto_with_trailing_punctuation( $text, $expected ) {
+		$this->assertSame( $expected, make_clickable( $text ) );
+	}
+
+	/**
+	 * Data provider.
+	 *
+	 * @return array
+	 */
+	public function data_mailto_with_trailing_punctuation() {
+		return array(
+			'trailing period' => array(
+				'Write to foo@example.com.',
+				'Write to <a href="mailto:foo@example.com">foo@example.com</a>.',
+			),
+			'trailing comma'  => array(
+				'Ask foo@example.com, then wait.',
+				'Ask <a href="mailto:foo@example.com">foo@example.com</a>, then wait.',
+			),
+		);
+	}
+
+	/**
 	 * @ticket 4570
 	 * @ticket 10990
 	 * @ticket 11211

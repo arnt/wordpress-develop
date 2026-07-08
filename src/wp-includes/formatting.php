@@ -3067,18 +3067,35 @@ function _make_web_ftp_clickable_cb( $matches ) {
 /**
  * Callback to convert email address match to HTML A element.
  *
- * This function was backported from 2.5.0 to 2.3.2. Regex callback for make_clickable().
+ * The match is deliberately loose — any run of non-space text with an '@' in it —
+ * so Unicode addresses like info@grå.org are caught. is_email() then decides
+ * whether it is really an address, which keeps this in step with the rest of core
+ * instead of duplicating (and drifting from) its rules in a regex.
  *
  * @since 2.3.2
+ *
  * @access private
  *
  * @param array $matches Single Regex Match.
- * @return string HTML A element with email address.
+ * @return string HTML A element with email address, or the original text if it isn't one.
  */
 function _make_email_clickable_cb( $matches ) {
-	$email = $matches[2] . '@' . $matches[3];
+	$email = $matches[2];
 
-	return $matches[1] . "<a href=\"mailto:{$email}\">{$email}</a>";
+	// A domain ends in a letter or digit, so trailing punctuation (a sentence's
+	// period, a comma, a closing bracket) belongs to the surrounding text, not the
+	// address. Peel it off and put it back after the link.
+	$trailing = '';
+	if ( preg_match( '#[.,;:!?)\]}>"\']+$#', $email, $tail ) ) {
+		$trailing = $tail[0];
+		$email    = substr( $email, 0, -strlen( $trailing ) );
+	}
+
+	if ( ! is_email( $email ) ) {
+		return $matches[0];
+	}
+
+	return $matches[1] . "<a href=\"mailto:{$email}\">{$email}</a>" . $trailing;
 }
 
 /**
@@ -3197,7 +3214,7 @@ function make_clickable( $text ) {
 			$ret = preg_replace_callback( $url_clickable, '_make_url_clickable_cb', $ret );
 
 			$ret = preg_replace_callback( '#([\s>])((www|ftp)\.[\w\\x80-\\xff\#$%&~/.\-;:=,?@\[\]+]+)#is', '_make_web_ftp_clickable_cb', $ret );
-			$ret = preg_replace_callback( '#([\s>])([.0-9a-z_+-]+)@(([0-9a-z-]+\.)+[0-9a-z]{2,})#i', '_make_email_clickable_cb', $ret );
+			$ret = preg_replace_callback( '#([\s>])([^\s<>@]+@[^\s<>@]+)#', '_make_email_clickable_cb', $ret );
 
 			$ret = substr( $ret, 1, -1 ); // Remove our whitespace padding.
 			$r  .= $ret;
