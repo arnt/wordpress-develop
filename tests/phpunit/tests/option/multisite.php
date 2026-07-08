@@ -240,6 +240,10 @@ class Tests_Option_Multisite extends WP_UnitTestCase {
 	}
 
 	public function data_email_domains() {
+		// Entries are validated as domains or domain suffixes: a bare label ('foo',
+		// 'woo') is kept so a whole TLD can be listed, a leading dot is stripped
+		// ('.foo' becomes 'foo'), and a trailing or doubled dot ('foo.',
+		// 'foo.net.biz..') and other junk are rejected.
 		return array(
 			array( array( 'woo', '', 'boo.com', 'foo.net.biz..' ), array( 'woo', 'boo.com' ) ),
 			array( "foo\nbar", array( 'foo', 'bar' ) ),
@@ -247,8 +251,8 @@ class Tests_Option_Multisite extends WP_UnitTestCase {
 			array( "\nfoo\nbar\n", array( 'foo', 'bar' ) ),
 			array( "foo\nfoo.net.biz..", array( 'foo' ) ),
 			array( "foo\nfoo.net.biz..\nbar.com", array( 'foo', 'bar.com' ) ),
-			array( 'foo.', array( 'foo.' ) ),
-			array( '.foo', array( '.foo' ) ),
+			array( 'foo.', '' ),
+			array( '.foo', array( 'foo' ) ),
 			array( 'foo^net', '' ),
 			array( array(), '' ),
 		);

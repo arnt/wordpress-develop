@@ -305,6 +305,48 @@ final class WP_Email_Address {
 	}
 
 	/**
+	 * Reduces a bare domain, or a domain suffix such as a TLD, to a canonical
+	 * Unicode form for comparison — or null if it isn't a valid domain.
+	 *
+	 * Unlike {@see self::from_string()} this does not require a full, deliverable
+	 * address: it accepts a single label ("ru") so a site can ban or limit a whole
+	 * top-level domain, and it strips a leading dot so ".ru" and "ru" mean the same
+	 * thing. It folds case, punycode and Unicode together — "РФ", "рф" and
+	 * "xn--p1ai" all reduce to "рф" — so either side of a comparison can be spelled
+	 * however the person typing it liked. Without the intl extension it falls back
+	 * to a plain lowercase, which handles the common all-ASCII case.
+	 *
+	 * Example:
+	 *
+	 *     'grå.org' === WP_Email_Address::normalize_domain( 'xn--gr-zia.org' );
+	 *     'ru'      === WP_Email_Address::normalize_domain( '.RU' );
+	 *     null      === WP_Email_Address::normalize_domain( 'not a domain' );
+	 *
+	 * @since 7.1.0
+	 *
+	 * @param string $domain A bare domain or domain suffix.
+	 * @return string|null The canonical Unicode domain, or null if $domain isn't a valid domain.
+	 */
+	public static function normalize_domain( string $domain ): ?string {
+		// Drop a leading dot so a suffix such as ".ru" bans or limits the whole TLD.
+		$domain = ltrim( trim( $domain ), '.' );
+		if ( '' === $domain ) {
+			return null;
+		}
+
+		if ( function_exists( 'idn_to_utf8' ) ) {
+			$decoded = idn_to_utf8( $domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46 );
+			if ( false !== $decoded ) {
+				$domain = $decoded;
+			}
+		} else {
+			$domain = strtolower( $domain );
+		}
+
+		return 1 === preg_match( self::DOMAIN_UNICODE_REGEX, $domain ) ? $domain : null;
+	}
+
+	/**
 	 * Returns the local part of the email address (the portion before the '@').
 	 *
 	 * Example:

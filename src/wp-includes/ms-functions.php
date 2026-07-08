@@ -404,23 +404,22 @@ function is_email_address_unsafe( $user_email ) {
 
 	$is_email_address_unsafe = false;
 
-	if ( $banned_names && is_array( $banned_names ) && false !== strpos( $user_email, '@', 1 ) ) {
-		$banned_names     = array_map( 'strtolower', $banned_names );
-		$normalized_email = strtolower( $user_email );
+	$email = WP_Email_Address::from_string( $user_email );
 
-		list( $email_local_part, $email_domain ) = explode( '@', $normalized_email );
+	if ( $banned_names && is_array( $banned_names ) && $email ) {
+		// Compare both sides in one canonical form so a banned domain matches
+		// however the registrant spelled it (punycode or Unicode).
+		$email_domain = WP_Email_Address::normalize_domain( $email->get_unicode_domain() );
 
 		foreach ( $banned_names as $banned_domain ) {
-			if ( ! $banned_domain ) {
+			$banned_domain = WP_Email_Address::normalize_domain( $banned_domain );
+			if ( null === $banned_domain ) {
 				continue;
 			}
 
-			if ( $email_domain === $banned_domain ) {
-				$is_email_address_unsafe = true;
-				break;
-			}
-
-			if ( str_ends_with( $normalized_email, ".$banned_domain" ) ) {
+			if ( $email_domain === $banned_domain
+				|| str_ends_with( $email_domain, ".$banned_domain" )
+			) {
 				$is_email_address_unsafe = true;
 				break;
 			}
@@ -525,10 +524,20 @@ function wpmu_validate_user_signup( $user_name, $user_email ) {
 	$limited_email_domains = get_site_option( 'limited_email_domains' );
 
 	if ( is_array( $limited_email_domains ) && ! empty( $limited_email_domains ) ) {
-		$limited_email_domains = array_map( 'strtolower', $limited_email_domains );
-		$email_domain          = strtolower( substr( $user_email, 1 + strpos( $user_email, '@' ) ) );
+		// Compare both sides in one canonical form so an allowed domain matches
+		// however the registrant or the admin spelled it (punycode or Unicode).
+		$email        = WP_Email_Address::from_string( $user_email );
+		$email_domain = $email ? WP_Email_Address::normalize_domain( $email->get_unicode_domain() ) : '';
 
-		if ( ! in_array( $email_domain, $limited_email_domains, true ) ) {
+		$allowed_domains = array();
+		foreach ( $limited_email_domains as $allowed_domain ) {
+			$allowed_domain = WP_Email_Address::normalize_domain( $allowed_domain );
+			if ( null !== $allowed_domain ) {
+				$allowed_domains[] = $allowed_domain;
+			}
+		}
+
+		if ( ! in_array( $email_domain, $allowed_domains, true ) ) {
 			$errors->add( 'user_email', __( 'Sorry, that email address is not allowed!' ) );
 		}
 	}

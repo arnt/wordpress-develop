@@ -72,6 +72,40 @@ class Tests_Multisite_wpmuValidateUserSignup extends WP_UnitTestCase {
 		$this->assertNotContains( 'user_email', $v['errors']->get_error_codes() );
 	}
 
+	/**
+	 * An allowed Unicode domain matches a registrant who spells it as punycode.
+	 *
+	 * @ticket 31992
+	 * @requires extension intl
+	 */
+	public function test_should_not_fail_for_allowed_domain_spelled_as_punycode() {
+		if ( '' === sanitize_email( 'info@grå.org' ) ) {
+			$this->markTestSkipped( 'Unicode email addresses are not enabled on this installation.' );
+		}
+
+		update_site_option( 'limited_email_domains', array( 'xn--gr-zia.org' ) );
+
+		$v = wpmu_validate_user_signup( 'foo123', 'info@grå.org' );
+		$this->assertNotContains( 'user_email', $v['errors']->get_error_codes() );
+	}
+
+	/**
+	 * A registrant whose Unicode domain is not on the allowed list still fails.
+	 *
+	 * @ticket 31992
+	 * @requires extension intl
+	 */
+	public function test_should_fail_for_unicode_domain_not_in_allowed_list() {
+		if ( '' === sanitize_email( 'info@grå.org' ) ) {
+			$this->markTestSkipped( 'Unicode email addresses are not enabled on this installation.' );
+		}
+
+		update_site_option( 'limited_email_domains', array( 'grå.org' ) );
+
+		$v = wpmu_validate_user_signup( 'foo123', 'gøril@blå.no' );
+		$this->assertContains( 'user_email', $v['errors']->get_error_codes() );
+	}
+
 	public function test_should_fail_for_existing_user_name() {
 		$u = self::factory()->user->create( array( 'user_login' => 'foo123' ) );
 		$v = wpmu_validate_user_signup( 'foo123', 'foo@example.com' );

@@ -246,4 +246,61 @@ class Tests_WpEmailAddress extends WP_UnitTestCase {
 			'han punycode domain'         => array( 'ahq@xn--uist2j67d64zv30b.xn--ses554g' ),
 		);
 	}
+
+	/**
+	 * Case, punycode and Unicode spellings of one domain reduce to the same string,
+	 * and a bare TLD survives so a whole top-level domain can be banned or limited.
+	 *
+	 * @dataProvider data_normalize_domain
+	 * @ticket 31992
+	 * @requires extension intl
+	 *
+	 * @covers WP_Email_Address::normalize_domain
+	 */
+	public function test_normalize_domain_canonicalizes( $domain, $expected ) {
+		$this->assertSame( $expected, WP_Email_Address::normalize_domain( $domain ) );
+	}
+
+	/**
+	 * @return array[]
+	 */
+	public function data_normalize_domain() {
+		return array(
+			'ascii domain unchanged'  => array( 'example.com', 'example.com' ),
+			'case folded'             => array( 'Example.COM', 'example.com' ),
+			'bare tld kept'           => array( 'ru', 'ru' ),
+			'leading dot on tld'      => array( '.RU', 'ru' ),
+			'unicode domain kept'     => array( 'grå.org', 'grå.org' ),
+			'punycode decoded'        => array( 'xn--gr-zia.org', 'grå.org' ),
+			'unicode tld from ascii'  => array( 'xn--p1ai', 'рф' ),
+			'subdomain punycode'      => array( 'mail.xn--gr-zia.org', 'mail.grå.org' ),
+		);
+	}
+
+	/**
+	 * A string that isn't a valid domain yields null.
+	 *
+	 * @dataProvider data_normalize_domain_invalid
+	 * @ticket 31992
+	 *
+	 * @covers WP_Email_Address::normalize_domain
+	 */
+	public function test_normalize_domain_rejects_invalid( $domain ) {
+		$this->assertNull( WP_Email_Address::normalize_domain( $domain ) );
+	}
+
+	/**
+	 * @return array[]
+	 */
+	public function data_normalize_domain_invalid() {
+		return array(
+			'empty'          => array( '' ),
+			'only a dot'     => array( '.' ),
+			'trailing dot'   => array( 'foo.' ),
+			'doubled dot'    => array( 'foo..bar' ),
+			'contains at'    => array( 'foo@example.com' ),
+			'whitespace'     => array( 'exa mple.com' ),
+			'invalid char'   => array( 'foo^net' ),
+		);
+	}
 }

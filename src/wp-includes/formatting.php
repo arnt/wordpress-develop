@@ -5076,7 +5076,8 @@ function sanitize_option( $option, $value ) {
 				$value   = array();
 
 				foreach ( $domains as $domain ) {
-					if ( ! preg_match( '/(--|\.\.)/', $domain ) && preg_match( '|^([a-zA-Z0-9-\.])+$|', $domain ) ) {
+					$domain = WP_Email_Address::normalize_domain( $domain );
+					if ( null !== $domain ) {
 						$value[] = $domain;
 					}
 				}

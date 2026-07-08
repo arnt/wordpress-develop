@@ -122,6 +122,52 @@ class Tests_Multisite_IsEmailAddressUnsafe extends WP_UnitTestCase {
 		);
 	}
 
+	/**
+	 * A banned Unicode domain must match however the registrant spells it,
+	 * and a banned punycode domain must match the Unicode spelling too.
+	 *
+	 * @dataProvider data_unicode_unsafe
+	 * @ticket 31992
+	 * @requires extension intl
+	 */
+	public function test_unicode_unsafe_emails( $banned, $email ) {
+		update_site_option( 'banned_email_domains', $banned );
+		$this->assertTrue( is_email_address_unsafe( $email ) );
+	}
+
+	public function data_unicode_unsafe() {
+		return array(
+			'unicode ban, unicode email'   => array( array( 'grå.org' ), 'info@grå.org' ),
+			'unicode ban, punycode email'  => array( array( 'grå.org' ), 'info@xn--gr-zia.org' ),
+			'punycode ban, unicode email'  => array( array( 'xn--gr-zia.org' ), 'info@grå.org' ),
+			'unicode subdomain of ban'     => array( array( 'grå.org' ), 'arnt@mail.grå.org' ),
+		);
+	}
+
+	/**
+	 * An unrelated Unicode domain is not caught by the ban.
+	 *
+	 * @ticket 31992
+	 * @requires extension intl
+	 */
+	public function test_unrelated_unicode_email_is_safe() {
+		update_site_option( 'banned_email_domains', array( 'grå.org' ) );
+		$this->assertFalse( is_email_address_unsafe( 'gøril@blå.no' ) );
+	}
+
+	/**
+	 * A bare TLD entry bans every address under it. The leading dot in ".ru" is
+	 * optional.
+	 *
+	 * @ticket 31992
+	 */
+	public function test_bare_tld_bans_the_whole_tld() {
+		update_site_option( 'banned_email_domains', array( '.ru' ) );
+		$this->assertTrue( is_email_address_unsafe( 'spammer@example.ru' ) );
+		$this->assertTrue( is_email_address_unsafe( 'spammer@mail.example.ru' ) );
+		$this->assertFalse( is_email_address_unsafe( 'buyer@example.com' ) );
+	}
+
 	public function test_email_with_only_top_level_domain_returns_safe() {
 		update_site_option( 'banned_email_domains', 'bar.com' );
 		$safe = is_email_address_unsafe( 'email@localhost' );
